@@ -32,7 +32,7 @@ const LOG_FILE = path.join(__dirname, 'admin-actions.log');
 const SCOPES = ['https://www.googleapis.com/auth/drive'];
 
 const generateUserId = () => {
-  return `USR-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+  return `USR-\( {new Date().getFullYear()}- \){Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 };
 
 let auth;
@@ -865,14 +865,15 @@ app.get('/api/app-update', async (req, res) => {
       }
       const answers = JSON.parse(await fsPromises.readFile(ANSWERS_FILE, 'utf8'));
       const userAnswers = req.body
+      const userkey  = answers[email] ? answers[email] : [];
       const generateId = (reqId) => {
-        const data = answers[email].filter((item) => item.taskId === reqId)
+        const data = userkey.filter((item) => item.taskId === reqId)
         console.log(data)
         return data[0].id
       }
       const updated = userAnswers.map((answer) => 
         answer.taskId ? {
-          id: generateId(answer.taskId)|| answers[email].length + 1 || null,
+          id: generateId(answer.taskId)|| userkey.length + 1 || null,
         taskId: answer.taskId,
         type: answer.type || 'Long-term',
         response: answer.response,
@@ -1034,10 +1035,57 @@ app.get('/api/users', async (req, res) => {
 
   const PORT = process.env.PORT || 5000;
 
-  app.listen(PORT, () => {
+  
+app.get('/get_gauth_link', (req, res) => {
+  const oAuth2Client = new google.auth.OAuth2(
+    process.env.CLIENT_ID,
+    process.env.CLIENT_SECRET,
+    "urn:ietf:wg:oauth:2.0:oob"
+  );
+
+  const authUrl = oAuth2Client.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    scope: SCOPES,
+  });
+
+  res.json({ url: authUrl });
+});
+
+
+app.post('/set_gauth_code', async (req, res) => {
+  const { code } = req.body;
+  if (!code) {
+    return res.status(400).json({ error: 'Code required' });
+  }
+
+  try {
+    const oAuth2Client = new google.auth.OAuth2(
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET,
+      "urn:ietf:wg:oauth:2.0:oob"
+    );
+
+    const { tokens } = await oAuth2Client.getToken(code.trim());
+    fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens));
+    
+    // Refresh global auth
+    auth = oAuth2Client;
+    auth.setCredentials(tokens);
+    drive = google.drive({ version: 'v3', auth });
+    
+    res.json({ success: true, message: 'Token set successfully' });
+  } catch (error) {
+    console.error('Set token error:', error.message);
+    res.status(500).json({ error: 'Failed to set token' });
+  }
+});
+
+app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 })();
+
 
 async function getOAuth2Client() {
   const oAuth2Client = new google.auth.OAuth2(
@@ -1046,35 +1094,23 @@ async function getOAuth2Client() {
     "urn:ietf:wg:oauth:2.0:oob"
   );
 
+  if (process.env.GOOGLE_TOKEN) {
+    try {
+      const tokens = JSON.parse(process.env.GOOGLE_TOKEN);
+      oAuth2Client.setCredentials(tokens);
+      return oAuth2Client;
+    } catch (e) {
+      console.error('Invalid GOOGLE_TOKEN env:', e.message);
+    }
+  }
+
   if (fs.existsSync(TOKEN_PATH)) {
     const token = JSON.parse(fs.readFileSync(TOKEN_PATH));
     oAuth2Client.setCredentials(token);
     return oAuth2Client;
   }
 
-  const authUrl = oAuth2Client.generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent",
-    scope: SCOPES,
-  });
-
-  console.log('Auth link:', authUrl);
-
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  const rawCode = await new Promise((resolve) =>
-    rl.question("Paste the authorization code here: ", resolve)
-  );
-  rl.close();
-
-  const code = rawCode.trim();
-  if (!code) throw new Error("Empty code");
-
-  const { tokens } = await oAuth2Client.getToken(code);
-  fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens));
-  oAuth2Client.setCredentials(tokens);
+  // No token, return without credentials
+  console.log('No Google token found. Drive features disabled until configured.');
   return oAuth2Client;
 }
