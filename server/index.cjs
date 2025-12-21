@@ -789,7 +789,7 @@ app.get('/api/app-update', async (req, res) => {
 
   app.get('/', async (req, res) => {
     try {
-      res.sendFile(path.join(__dirname, './'));
+      res.sendFile(path.join(__dirname));
     } catch(error) {
 
     }
