@@ -143,6 +143,8 @@ let drive;
     }
   });
 
+  console.log('ENv:', process.env.JWT_SECRET);
+
   admin.post('/create', async (req, res) => {
     const { id, userId, password, email, rank, adminKey } = req.body;  // Improved: added email, rank, separated adminKey from password
     const action = `${req.method} ${req.path}`;
