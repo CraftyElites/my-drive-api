@@ -787,13 +787,35 @@ app.get('/api/app-update', async (req, res) => {
     }
   });
 
-  app.get('/', async (req, res) => {
-    try {
-      res.sendFile(path.join(__dirname, '../server'));
-    } catch(error) {
-
+  // 1. Handle the root route '/' — serve index.html automatically
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'index.html');
+  
+  fs.access(indexPath, fs.constants.F_OK, (err) => {
+    if (err) {
+      return res.status(404).send('index.html not found');
     }
+    res.sendFile(indexPath);
   });
+});
+
+// 2. Serve ANY other file in the current directory when requested directly
+app.get('/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, filename);
+
+  // Security: prevent going outside the server directory (e.g., no ../../etc/passwd)
+  if (!filePath.startsWith(__dirname)) {
+    return res.status(403).send('Access denied');
+  }
+
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      return res.status(404).send('File not found');
+    }
+    res.sendFile(filePath);
+  });
+});
   app.post('/api/answers', async (req, res) => {
     const { email, taskId, response, reward, type } = req.body;
     try {
