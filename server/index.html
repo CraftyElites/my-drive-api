@@ -1128,7 +1128,7 @@
             .floating-shape {
                 width: 210px;
                 height: 210px;
-                right: calc(50% - 105px);
+                right: calc(50% - 135px);
                 position: relative;
             }
             
@@ -1198,8 +1198,8 @@
                 <h1 class="hero-title">Bridge. The cutting edge. <span>Succeed in Zion.</span></h1>
                 <p class="hero-subtitle">We build cutting-edge solutions that drive digital transformation and empower businesses to thrive in the modern technological landscape.</p>
                 <div class="hero-buttons">
-                    <button class="cta-button" id="subscribe">Subscribe</button>
-                    <button id="header-cta" class="cta-button">Create</button>
+                    <button class="cta-button" id="subscribe">Download BridgeBank v1.0.0</button>
+                    <button id="header-cta" class="cta-button">Explore</button>
                 </div>
             </div>
             <div class="hero-image hidden">
@@ -2189,7 +2189,7 @@ const enhanceButtonClick = (buttonId) => {
             setTimeout(() => {
                 button.style.transform = '';
                 window.location.href = button.dataset.url || (
-                    buttonId === 'header-cta' ? '/create-website/public/authentication.html' : 
+                    buttonId === 'header-cta' ? 'https://drive.google.com/file/d/12kfz_lncM7HIcYyA9KA8Ga46MZ_TyQ5a/view?usp=drivesdk' : 
                     buttonId === 'subscribe' ? '/create-website/public/software-update/software.html' : '#'
                 );
             }, 150);
