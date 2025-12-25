@@ -70,7 +70,7 @@ let drive;
       }
       if (!fs.existsSync(ADMINS_FILE)) {
         await fsPromises.writeFile(ADMINS_FILE, JSON.stringify({
-          "key": "Net",
+          "key": "Purity$",
           "admins": {  // Improved: renamed "users" to "admins" for clarity
             "enochatenaga@gmail.com": {  // Improved: added ".com" assuming typo
               "id": 1,
