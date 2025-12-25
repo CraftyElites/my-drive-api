@@ -1060,7 +1060,7 @@ app.get('/api/users', async (req, res) => {
   const PORT = process.env.PORT || 5000;
 
   
-app.get('/get_gauth_link', (req, res) => {
+app.get('/e/get_gauth_link', (req, res) => {
   const oAuth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET,
