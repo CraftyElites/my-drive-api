@@ -223,53 +223,55 @@ let drive;
   });
 
   admin.post('/login', async (req, res) => {
-    const { email, password, adminKey} = req.body;
-    const action = `${req.method} ${req.path}`;
-    const ip = req.ip;
-    const data = { email }; // Exclude password for security
-    logAdminAction(action, ip, data);
+  const { email, password, adminKey } = req.body;
+  const action = `${req.method} ${req.path}`;
+  const ip = req.ip;
+  const data = { email }; // Exclude password for security
+  logAdminAction(action, ip, data);
 
-    try {
-      if (!email || !password || !adminKey) {
-        return res.status(400).json({ error: 'Key and password are required' });
-      }
-      const currentAdmins = JSON.parse(await fsPromises.readFile(ADMINS_FILE, 'utf8'));
-      const currentUsers =  JSON.parse(await fsPromises.readFile(USERS_FILE, 'utf8'));
-
-
-      if (adminKey !== currentAdmins.key) {
-        return res.status(403).json({error: 'No Admin Access. Invalid Key'})
-      }
-
-      const adminUserCheck = currentAdmins.admins[email];
-      
-      const adminUser = currentUsers[adminUserCheck.email];
-      if (!adminUser || !adminUser.hashedPassword) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-      const match = await bcrypt.compare(password, adminUser.hashedPassword);
-      if (!match) {
-        return res.status(401).json({ error: 'Invalid credentials, password mismatch' });
-      }
-      const token = jwt.sign(
-        { email, userId: adminUser.userId, rank: adminUser.rank },
-        process.env.JWT_SECRET,
-        { expiresIn: '1h' }
-      );
-      console.log('Admin Login Success by', email)
-      
-      res.status(200).json({
-        success: true,
-        token,
-        signedDate: Math.floor(Date.now() / 1000),  // current time in seconds
-        duration: 3600,                             // 1 hour session
-        message: "Login successful"
-      });
-    } catch (error) {
-      console.error('Admin login error:', error.message);
-      res.status(500).json({ error: 'Login failed' });
+  try {
+    if (!email || !password || !adminKey) {
+      return res.status(400).json({ error: 'Key and password are required' });
     }
-  });
+    const currentAdmins = JSON.parse(await fsPromises.readFile(ADMINS_FILE, 'utf8'));
+    const currentUsers = JSON.parse(await fsPromises.readFile(USERS_FILE, 'utf8'));
+
+    if (adminKey !== currentAdmins.key) {
+      return res.status(403).json({ error: 'No Admin Access. Invalid Key' });
+    }
+
+    const adminInfo = currentAdmins.admins[email];
+    if (!adminInfo) {
+      return res.status(401).json({ error: 'Invalid credentials: Not an admin' });
+    }
+
+    const user = currentUsers[email];
+    if (!user || !user.hashedPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const match = await bcrypt.compare(password, user.hashedPassword);
+    if (!match) {
+      return res.status(401).json({ error: 'Invalid credentials, password mismatch' });
+    }
+    const token = jwt.sign(
+      { email, userId: adminInfo.userId, rank: adminInfo.rank },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    console.log('Admin Login Success by', email);
+
+    res.status(200).json({
+      success: true,
+      token,
+      signedDate: Math.floor(Date.now() / 1000),  // current time in seconds
+      duration: 3600,                             // 1 hour session
+      message: "Login successful"
+    });
+  } catch (error) {
+    console.error('Admin login error:', error.message);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
   // --- ADMIN-ONLY MIDDLEWARE (rank check) ---
 const requireAdmin = (req, res, next) => {
   if (!req.user || !req.user.rank) {
